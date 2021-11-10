@@ -1,0 +1,27 @@
+BYTE MEMAC_B_CTL_D6 = $D65D
+BYTE MEMAC_B_CTL_D7 = $D75D
+BYTE MEMAC_B = $4000
+BYTE OLD_MEMAC, NEW_MEMAC
+BYTE det = [0]
+PROC Main()
+    det = 0
+    MEMAC_B_CTL_D6 = 0
+    OLD_MEMAC = MEMAC_B
+    MEMAC_B_CTL_D6 = $80
+    NEW_MEMAC = MEMAC_B
+    IF OLD_MEMAC <> NEW_MEMAC THEN
+        PRINTE("VBXE under $D6")
+        det = 1
+    FI
+    MEMAC_B_CTL_D7 = 0
+    OLD_MEMAC = MEMAC_B
+    MEMAC_B_CTL_D7 = $80
+    NEW_MEMAC = MEMAC_B
+    IF OLD_MEMAC <> NEW_MEMAC THEN
+        PRINTE("VBXE under $D7")
+        det = 1
+    FI
+    IF det = 0 THEN
+        PRINTE("VBXE not detected.")
+    FI
+RETURN
