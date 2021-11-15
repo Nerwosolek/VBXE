@@ -23,13 +23,37 @@ BYTE FUNC vbxe_detect()
     FI
 RETURN (0)    
 
+BYTE FUNC vbxe_core_magic(BYTE page)
+    BYTE POINTER magic_ptr
+    magic_ptr=page*256+$40
+RETURN (magic_ptr^)
+
+BYTE FUNC vbxe_is_rambo(BYTE page)
+    BYTE POINTER rambo_ptr
+    rambo_ptr=page*256+$40
+RETURN (rambo_ptr^ RSH 7)
+
 PROC Main()
     BYTE vbxe_page = [0]
+    BYTE magic = [0]
+    
+    BYTE POINTER rev_ptr
     vbxe_page = vbxe_detect()
+    rev_ptr = vbxe_page*256+$41
     IF vbxe_page = 0 THEN
         PRINTE("VBXE not detected.")
         RETURN
     ELSE
         PRINTF("VBXE under %H%E", vbxe_page*256)
     FI
+    magic = vbxe_core_magic(vbxe_page)
+    IF vbxe_page <> 0 THEN
+        PRINTF("VBXE's magic number is: %H%E", magic)
+        PRINTF("Revision byte: %H %E", rev_ptr^)
+        IF vbxe_is_rambo(vbxe_page) THEN
+            PRINTE("Rambo emulation enabled.")
+        ELSE
+            PRINTE("Rambo emulation disabled.")
+        FI
+    FI    
 RETURN
