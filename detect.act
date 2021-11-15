@@ -30,13 +30,20 @@ RETURN (magic_ptr^)
 
 BYTE FUNC vbxe_is_rambo(BYTE page)
     BYTE POINTER rambo_ptr
-    rambo_ptr=page*256+$40
+    rambo_ptr=page*256+$41
 RETURN (rambo_ptr^ RSH 7)
+
+BYTE FUNC vbxe_core_rev(BYTE page)
+    BYTE POINTER rev_ptr
+    BYTE rev
+    rev_ptr=page*256+$41
+    rev = (rev_ptr^&$0F) + 10 * ((rev_ptr^&$70) RSH 4)
+RETURN (rev)
 
 PROC Main()
     BYTE vbxe_page = [0]
     BYTE magic = [0]
-    
+    BYTE rev = [0]    
     BYTE POINTER rev_ptr
     vbxe_page = vbxe_detect()
     rev_ptr = vbxe_page*256+$41
@@ -55,5 +62,7 @@ PROC Main()
         ELSE
             PRINTE("Rambo emulation disabled.")
         FI
+        rev = vbxe_core_rev(vbxe_page)
+        PRINTF("Revision number: %I%E", rev)
     FI    
 RETURN
