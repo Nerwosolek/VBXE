@@ -1,22 +1,25 @@
 BYTE MEMAC_B_CTL_D6 = $D65D
 BYTE MEMAC_B_CTL_D7 = $D75D
-BYTE MEMAC_B = $4000
+BYTE ARRAY MEMAC_B($1000) = $4000
+BYTE RND = $D20A
+BYTE PORTB = $D301
+BYTE KEYB = 764
 
 BYTE FUNC vbxe_detect()
     BYTE OLD_MEMAC, NEW_MEMAC
 
     MEMAC_B_CTL_D6 = 0
-    OLD_MEMAC = MEMAC_B
+    OLD_MEMAC = MEMAC_B(0)
     MEMAC_B_CTL_D6 = $80
-    NEW_MEMAC = MEMAC_B
+    NEW_MEMAC = MEMAC_B(0)
     MEMAC_B_CTL_D6 = 0
     IF OLD_MEMAC <> NEW_MEMAC THEN
         RETURN ($D6)
     FI
     MEMAC_B_CTL_D7 = 0
-    OLD_MEMAC = MEMAC_B
+    OLD_MEMAC = MEMAC_B(0)
     MEMAC_B_CTL_D7 = $80
-    NEW_MEMAC = MEMAC_B
+    NEW_MEMAC = MEMAC_B(0)
     MEMAC_B_CTL_D7 = 0
     IF OLD_MEMAC <> NEW_MEMAC THEN
         RETURN($D7)
@@ -42,17 +45,32 @@ RETURN (rev)
 ; 
 PROC set_memac_b(BYTE page, BYTE cpu, BYTE antic, BYTE bank)
     BYTE POINTER memb_ptr
+    BYTE val
     memb_ptr=page*256+$5D
-    IF bank > 15 THEN
-        bank = 15
+    IF bank > 31 THEN
+        bank = 31
     FI
-    memb_ptr^ = bank
+    val = bank
     IF cpu THEN
-        memb_ptr^ ==+ $80
+        val ==+ $80
     FI
     IF antic THEN
-        memb_ptr^ ==+ $40
+        val ==+ $40
     FI
+    memb_ptr^ = val
+RETURN
+
+PROC set_xdl_adr(BYTE page, BYTE xdl_adr0, BYTE xdl_adr1, BYTE xdl_adr2)
+    BYTE POINTER xdladr_ptr
+    xdladr_ptr = page*256+$41
+    xdladr_ptr^ = xdl_adr0
+    Print("xdladr_ptr: "):PrintCE(xdladr_ptr)
+    xdladr_ptr ==+1
+    xdladr_ptr^ = xdl_adr1
+    Print("xdladr_ptr+1: "):PrintCE(xdladr_ptr)
+    xdladr_ptr ==+1
+    xdladr_ptr^ = xdl_adr2
+    Print("xdladr_ptr+2: "):PrintCE(xdladr_ptr)
 RETURN
 
 PROC Main()
@@ -60,6 +78,8 @@ PROC Main()
     BYTE magic = [0]
     BYTE rev = [0]    
     BYTE POINTER rev_ptr
+    CARD bank_iter
+    BYTE val
     vbxe_page = vbxe_detect()
     rev_ptr = vbxe_page*256+$41
     IF vbxe_page = 0 THEN
@@ -79,9 +99,38 @@ PROC Main()
         FI
         rev = vbxe_core_rev(vbxe_page)
         PRINTF("Revision number: %I%E", rev)
-
-        ;Turn the XDL on
-        ;rev_ptr = vbxe_page*256+$40
-        ;rev_ptr^ = 1
+        PORTB = $FF
+        ;Set CPU to VBXE
+        set_memac_b(vbxe_page, 1, 0, 0)
+        ; XDL
+        MEMAC_B(1) = $42 + 32 ; XDLC.1 
+        MEMAC_B(2) = $80 + 8 ; XDLC.2
+        MEMAC_B(3) = $4F ; RPTL
+        MEMAC_B(4) = 0   ; OVADR1
+        MEMAC_B(5) = $04 ; OVADR2
+        MEMAC_B(6) = 0   ; OVADR3
+        MEMAC_B(7) = 0   ; OVARD_STEP1
+        MEMAC_B(8) = 0   ; OVARD_STEP2
+        MEMAC_B(9) = 0   ; XDLC_ATT1 (width + palettes)
+        MEMAC_B(10) = 255; XDLC_ATT2 (OVR to priority)
+        ; Random colors in first line 
+        FOR bank_iter=$400 TO $53F
+            DO  
+              val=MEMAC_B(bank_iter-1)
+              ;PRINTC(bank_iter):PRINT(" "):PRINTBE(val)
+              MEMAC_B(bank_iter) = (val + 1)
+            OD
+        ; set address of XDL
+        set_xdl_adr(vbxe_page, 1, 0, 0)
+        ; Back CPU to RAM
+        ;set_memac_b(vbxe_page, 0, 0, 0)
+        ; Turn XDL processing
+        rev_ptr = vbxe_page*256+$40
+        rev_ptr^ = 1
+        WHILE KEYB=255
+        DO
+            
+        OD
+        rev_ptr^ = 0
     FI    
 RETURN
