@@ -79,9 +79,10 @@ PROC Main()
     BYTE rev = [0]    
     BYTE POINTER rev_ptr
     CARD bank_iter
-    BYTE val
+    BYTE val = [0], ind
     vbxe_page = vbxe_detect()
     rev_ptr = vbxe_page*256+$41
+    val=0
     IF vbxe_page = 0 THEN
         PRINTE("VBXE not detected.")
         RETURN
@@ -114,23 +115,29 @@ PROC Main()
         MEMAC_B(9) = 0   ; XDLC_ATT1 (width + palettes)
         MEMAC_B(10) = 255; XDLC_ATT2 (OVR to priority)
         ; Random colors in first line 
-        FOR bank_iter=$400 TO $53F
+          val=47       
+          ind=0
+          FOR bank_iter=$400 TO $53F
             DO  
-              val=MEMAC_B(bank_iter-1)
               ;PRINTC(bank_iter):PRINT(" "):PRINTBE(val)
-              MEMAC_B(bank_iter) = (val + 1)
+              ;PRINTBE(val)     
+              IF ind MOD 16=0 THEN
+                val==+1
+              FI
+              MEMAC_B(bank_iter) = val
+              ind==+1          
             OD
         ; set address of XDL
         set_xdl_adr(vbxe_page, 1, 0, 0)
         ; Back CPU to RAM
-        ;set_memac_b(vbxe_page, 0, 0, 0)
+        set_memac_b(vbxe_page, 0, 0, 0)
         ; Turn XDL processing
         rev_ptr = vbxe_page*256+$40
         rev_ptr^ = 1
         WHILE KEYB=255
         DO
-            
         OD
+        KEYB=255            
         rev_ptr^ = 0
     FI    
 RETURN
